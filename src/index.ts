@@ -10,6 +10,48 @@ import { generateSpeechUrl } from "./tts";
 import { unwrap } from "./unwrap";
 
 export default new Elysia()
+  .guard({
+    cookie: t.Cookie({
+      readerAccessToken: t.Optional(t.String()),
+    }),
+  })
+  .group("/auth", (app) =>
+    app
+      .get("/login", async () => {
+        return pageResponse(
+          "Login",
+          html`
+            <form action="/auth/login" method="post">
+              <label>
+                <input type="password" name="readerAccessToken" />
+              </label>
+              <button type="submit">Login</button>
+            </form>
+          `
+        );
+      })
+      .post(
+        "/login",
+        async ({ body: { readerAccessToken }, cookie }) => {
+          cookie.readerAccessToken.set({
+            value: readerAccessToken,
+            path: "/",
+            maxAge: 60 * 60 * 24 * 365,
+          });
+          return redirect("/");
+        },
+        {
+          body: t.Object({
+            readerAccessToken: t.String(),
+          }),
+        }
+      )
+  )
+  .onBeforeHandle(async ({ cookie }) => {
+    if (cookie.readerAccessToken.value !== Bun.env["WEB_PASSWORD"]) {
+      return redirect("/auth/login");
+    }
+  })
   .get("/", async () => {
     const { bookmarks } = unwrap(await hoarder.GET("/bookmarks"));
     return pageResponse(
