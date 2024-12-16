@@ -92,6 +92,7 @@ export default new Elysia()
                 <div>
                   <audio
                     controls
+                    autoplay
                     src="${state.url}"
                     style="box-sizing: border-box; width: 100%;"
                   ></audio>
