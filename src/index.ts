@@ -104,7 +104,9 @@ export default new Elysia()
                 hx-get="/bookmarks/${bookmark.id}?mode=listen&time=${Date.now()}"
                 hx-target="#listening-controls"
                 hx-swap="innerHTML"
-                hx-trigger="load delay:5s"
+                hx-trigger="load delay:${Date.now() - state.started < 5000
+                  ? 1
+                  : 5}s"
               >
                 Loading... (${Math.round((Date.now() - state.started) / 1000)}s
                 elapsed)
