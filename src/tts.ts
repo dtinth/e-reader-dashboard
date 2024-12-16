@@ -1,3 +1,4 @@
+import { getOrCreate } from "@thai/get-or-create";
 import { createHash } from "crypto";
 import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 import { StorageBlob } from "./storage";
@@ -17,7 +18,7 @@ export async function generateSpeech(text: string): Promise<ArrayBuffer> {
     synthesizer.speakTextAsync(
       text,
       (result) => {
-        console.log(result);
+        // console.log(result);
         const { audioData } = result;
         synthesizer.close();
         resolve(audioData);
@@ -38,4 +39,32 @@ export async function generateSpeechUrl(text: string): Promise<string> {
   const data = await generateSpeech(text);
   await blob.upload(Buffer.from(data));
   return blob.getUrl();
+}
+
+const speechStateMap = new Map<string, SpeechState>();
+
+interface SpeechState {
+  status: "pending" | "done" | "error";
+  started: number;
+  url?: string;
+  error?: string;
+}
+
+export function getSpeechState(text: string) {
+  const hash = createHash("sha256").update(text).digest("hex");
+  return getOrCreate(speechStateMap, hash, () => {
+    const state: SpeechState = { status: "pending", started: Date.now() };
+    const work = async () => {
+      try {
+        state.url = await generateSpeechUrl(text);
+        state.status = "done";
+      } catch (error: any) {
+        console.error(error);
+        state.error = `${error}`;
+        state.status = "error";
+      }
+    };
+    work();
+    return state;
+  });
 }

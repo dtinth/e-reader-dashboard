@@ -1,12 +1,12 @@
-import { html, renderHtml } from "@thai/html";
+import { html } from "@thai/html";
 import Elysia, { redirect, t } from "elysia";
 import { fromHtml } from "hast-util-from-html";
 import { sanitize } from "hast-util-sanitize";
 import { toHtml } from "hast-util-to-html";
 import { toText } from "hast-util-to-text";
 import { hoarder, type Bookmark } from "./hoarder";
-import { pageResponse } from "./pageResponse";
-import { generateSpeechUrl } from "./tts";
+import { fragmentResponse, pageResponse } from "./pageResponse";
+import { getSpeechState } from "./tts";
 import { unwrap } from "./unwrap";
 
 export default new Elysia()
@@ -85,8 +85,30 @@ export default new Elysia()
           : `Unsupported content type: ${bookmark.content.type}`;
       if (mode === "listen") {
         const text = toText(fromHtml(htmlContent));
-        const url = await generateSpeechUrl(text);
-        return redirect(url);
+        const state = getSpeechState(text);
+        return fragmentResponse(
+          state.status === "done"
+            ? html`
+                <div>
+                  <audio
+                    controls
+                    src="${state.url}"
+                    style="box-sizing: border-box; width: 100%;"
+                  ></audio>
+                </div>
+              `
+            : state.status === "error"
+            ? html`<div>${state.error}</div>`
+            : html`<div
+                hx-get="/bookmarks/${bookmark.id}?mode=listen&time=${Date.now()}"
+                hx-target="#listening-controls"
+                hx-swap="innerHTML"
+                hx-trigger="load delay:5s"
+              >
+                Loading... (${Math.round((Date.now() - state.started) / 1000)}s
+                elapsed)
+              </div>`
+        );
       }
       const sanitizedHtml = toHtml(sanitize(fromHtml(htmlContent)));
       return pageResponse(
@@ -94,20 +116,16 @@ export default new Elysia()
         html`
           <div style="padding: 0 64px">
             <h1>${getBookmarkTitle(bookmark)}</h1>
-            <button
-              data-listen-html="${renderHtml(html`
-                <div>
-                  <audio
-                    controls
-                    src="/bookmarks/${bookmark.id}?mode=listen"
-                    style="box-sizing: border-box; width: 100%;"
-                  ></audio>
-                </div>
-              `)}"
-              onclick="this.outerHTML = this.dataset.listenHtml"
-            >
-              Listen
-            </button>
+            <div id="listening-controls">
+              <button
+                onclick="this.innerText = 'Loading...'; this.disabled = true;"
+                hx-get="/bookmarks/${bookmark.id}?mode=listen"
+                hx-target="#listening-controls"
+                hx-swap="innerHTML"
+              >
+                Listen
+              </button>
+            </div>
             <div>${{ __html: sanitizedHtml }}</div>
           </div>
           <style>

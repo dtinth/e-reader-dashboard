@@ -36,6 +36,7 @@ export async function pageResponse(title: string, body: Html) {
           }
         </style>
         <title>${title}</title>
+        <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
       </head>
       <body>
         <div>${body}</div>
@@ -43,6 +44,14 @@ export async function pageResponse(title: string, body: Html) {
     </html>`);
   return new Response(fromAnyIterable(stream), {
     status: 200,
-    headers: { "Content-Type": "text/html" },
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
+}
+
+export async function fragmentResponse(html: Html) {
+  const stream = renderHtmlStream(html);
+  return new Response(fromAnyIterable(stream), {
+    status: 200,
+    headers: { "Content-Type": "text/html; charset=utf-8" },
   });
 }

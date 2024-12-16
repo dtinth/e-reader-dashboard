@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@sec-ant/readable-stream": "^0.6.0",
+    "@thai/get-or-create": "npm:@jsr/thai__get-or-create",
     "@thai/html": "npm:@jsr/thai__html",
     "elysia": "^1.1.26",
     "hast-util-from-html": "^2.0.3",
