@@ -1,5 +1,5 @@
 import { html } from "@thai/html";
-import { createHash } from "crypto";
+import { createHash, createHmac } from "crypto";
 import Elysia, { redirect, t } from "elysia";
 import { fromHtml } from "hast-util-from-html";
 import { sanitize } from "hast-util-sanitize";
@@ -12,6 +12,32 @@ import { getSpeechState } from "./tts";
 import { unwrap } from "./unwrap";
 
 export default new Elysia()
+  .get(
+    "/saved/:hash",
+    async ({ params: { hash }, query: { expiry, signature } }) => {
+      const key = `saved-pages/${hash}.html`;
+      const hmac = createHmac("md5", Bun.env["WEB_PASSWORD"]!)
+        .update(key + expiry)
+        .digest("hex");
+      if (Date.now() >= +expiry) {
+        return new Response("Expired", { status: 410 });
+      }
+      if (hmac !== signature) {
+        return new Response("Invalid signature", { status: 403 });
+      }
+      const blob = new StorageBlob(key);
+      return new Response(await blob.download(), {
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
+    },
+    {
+      params: t.Object({ hash: t.String() }),
+      query: t.Object({
+        expiry: t.String(),
+        signature: t.String(),
+      }),
+    }
+  )
   .guard({
     cookie: t.Cookie({
       readerAccessToken: t.Optional(t.String()),
@@ -108,6 +134,7 @@ export default new Elysia()
       "Page saver",
       html`
         <div id="status">Loading…</div>
+        <div id="output"></div>
         <script type="module">
           import { Readability } from "https://cdn.jsdelivr.net/npm/@mozilla/readability@0.5.0/+esm";
           function setStatus(status) {
@@ -176,7 +203,18 @@ export default new Elysia()
                 }
                 try {
                   const response = await r.json();
-                  setStatus("Saved! " + response.url);
+                  setStatus("Saved!");
+                  const savedUrl = location.origin + response.url;
+                  const output = document.createElement("textarea");
+                  output.value = savedUrl;
+                  output.readOnly = true;
+                  output.onclick = () => {
+                    output.select();
+                    navigator.clipboard.writeText(savedUrl).then(() => {
+                      setStatus("Copied to clipboard!");
+                    });
+                  };
+                  document.getElementById("output").append(output);
                 } catch (error) {
                   setStatus("Failed to save: " + error);
                 }
@@ -195,24 +233,18 @@ export default new Elysia()
       const key = `saved-pages/${hash}.html`;
       const blob = new StorageBlob(key);
       await blob.upload(Buffer.from(html));
-      return { url: "/saved/" + hash };
+      const expiry = Date.now() + 86400e3;
+      const signature = createHmac("md5", Bun.env["WEB_PASSWORD"]!)
+        .update(key + expiry)
+        .digest("hex");
+      return {
+        url: "/saved/" + hash + "?expiry=" + expiry + "&signature=" + signature,
+      };
     },
     {
       body: t.Object({
         html: t.String(),
       }),
-    }
-  )
-  .get(
-    "/saved/:hash",
-    async ({ params: { hash } }) => {
-      const blob = new StorageBlob(`saved-pages/${hash}.html`);
-      return new Response(await blob.download(), {
-        headers: { "Content-Type": "text/html; charset=utf-8" },
-      });
-    },
-    {
-      params: t.Object({ hash: t.String() }),
     }
   )
   .get(
