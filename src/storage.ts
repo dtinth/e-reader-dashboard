@@ -29,7 +29,19 @@ export class StorageBlob {
   async upload(data: Buffer): Promise<void> {
     await minioClient.putObject(STORAGE_BUCKET, this.name, data);
   }
-  getUrl() {
-    return `${STORAGE_PUBLIC_URL}/${this.name}`;
+  async download(): Promise<Buffer> {
+    const stream = await minioClient.getObject(STORAGE_BUCKET, this.name);
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(chunk);
+    }
+    return Buffer.concat(chunks);
+  }
+  async getUrl() {
+    return minioClient.presignedGetObject(
+      STORAGE_BUCKET,
+      this.name,
+      60 * 60 * 24
+    );
   }
 }

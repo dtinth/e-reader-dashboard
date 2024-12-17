@@ -1,7 +1,11 @@
 import { fromAnyIterable } from "@sec-ant/readable-stream/ponyfill/fromAnyIterable";
 import { type Html, html, renderHtmlStream } from "@thai/html";
 
-export async function pageResponse(title: string, body: Html) {
+export async function pageResponse(
+  title: string,
+  body: Html,
+  { header }: { header?: Html } = {}
+) {
   const stream = renderHtmlStream(html`<!DOCTYPE html>
     <html lang="en">
       <head>
@@ -34,12 +38,23 @@ export async function pageResponse(title: string, body: Html) {
           a {
             text-decoration: underline;
           }
+          body {
+            max-width: unset;
+            margin: 0;
+            padding: 0;
+          }
+          .container {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 0 10px;
+          }
         </style>
         <title>${title}</title>
         <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
       </head>
       <body>
-        <div>${body}</div>
+        ${header}
+        <div class="container">${body}</div>
       </body>
     </html>`);
   return new Response(fromAnyIterable(stream), {

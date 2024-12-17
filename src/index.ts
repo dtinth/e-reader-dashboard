@@ -1,4 +1,5 @@
 import { html } from "@thai/html";
+import { createHash } from "crypto";
 import Elysia, { redirect, t } from "elysia";
 import { fromHtml } from "hast-util-from-html";
 import { sanitize } from "hast-util-sanitize";
@@ -6,6 +7,7 @@ import { toHtml } from "hast-util-to-html";
 import { toText } from "hast-util-to-text";
 import { hoarder, type Bookmark } from "./hoarder";
 import { fragmentResponse, pageResponse } from "./pageResponse";
+import { StorageBlob } from "./storage";
 import { getSpeechState } from "./tts";
 import { unwrap } from "./unwrap";
 
@@ -53,11 +55,43 @@ export default new Elysia()
     }
   })
   .get("/", async () => {
-    const { bookmarks } = unwrap(await hoarder.GET("/bookmarks"));
     return pageResponse(
-      "Bookmarks",
+      "app",
       html`
         <h1>Bookmarks</h1>
+        <div
+          hx-get="/bookmarks"
+          hx-swap="outerHTML"
+          hx-trigger="load"
+          style="text-align: center"
+        >
+          Loading bookmarks...
+        </div>
+      `,
+      {
+        header: html` <div
+            id="now"
+            style="font-size: 32vw; line-height: 1; text-align: center;"
+          >
+            …
+          </div>
+          <script>
+            const updateNow = () => {
+              const h = new Date().getHours();
+              const m = new Date().getMinutes();
+              document.getElementById("now").innerText =
+                h + ":" + String(m).padStart(2, "0");
+            };
+            setInterval(updateNow, 5000);
+            updateNow();
+          </script>`,
+      }
+    );
+  })
+  .get("/bookmarks", async () => {
+    const { bookmarks } = unwrap(await hoarder.GET("/bookmarks"));
+    return fragmentResponse(
+      html`
         <ul>
           ${bookmarks.map((bookmark) => {
             const title = getBookmarkTitle(bookmark);
@@ -69,6 +103,118 @@ export default new Elysia()
       `
     );
   })
+  .get("/saver", async () => {
+    return pageResponse(
+      "Page saver",
+      html`
+        <div id="status">Loading…</div>
+        <script type="module">
+          import { Readability } from "https://cdn.jsdelivr.net/npm/@mozilla/readability@0.5.0/+esm";
+          function setStatus(status) {
+            document.getElementById("status").innerText = status;
+          }
+          window.addEventListener("message", async (event) => {
+            if (event.data?.h_result) {
+              setStatus("Processing…");
+              const { url, html, baseURI, documentURI } = event.data.h_result;
+              const doc = new DOMParser().parseFromString(html, "text/html");
+              Object.defineProperty(doc, "baseURI", { value: baseURI });
+              Object.defineProperty(doc, "documentURI", { value: documentURI });
+              const reader = new Readability(doc);
+              const article = reader.parse();
+              setStatus("Saving…");
+
+              const h1 = document.createElement("h1");
+              h1.innerText = article.title;
+
+              const header = document.createElement("header");
+              header.innerText = article.siteName;
+
+              const footer = document.createElement("footer");
+              if (article.publishedTime) {
+                footer.append(article.publishedTime);
+              }
+
+              let byline;
+              if (article.byline) {
+                byline = document.createElement("p");
+                byline.innerText = article.byline;
+              }
+
+              console.log(article);
+              const htmlPage = [
+                "<!DOCTYPE html>",
+                "<html>",
+                "<head>",
+                '<meta charset="utf-8">',
+                '<meta name="viewport" content="width=device-width, initial-scale=1">',
+                "<title>",
+                article.title,
+                "</title>",
+                "</head>",
+                "<body>",
+                header.outerHTML,
+                h1.outerHTML,
+                byline ? byline.outerHTML : "",
+                "<article>",
+                article.content,
+                "</article>",
+                footer.outerHTML,
+                "</body>",
+                "</html>",
+              ].join("\\n");
+
+              fetch("/save", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ html: htmlPage }),
+              }).then(async (r) => {
+                if (!r.ok) {
+                  setStatus("Failed to save: " + (await r.text()));
+                }
+                try {
+                  const response = await r.json();
+                  setStatus("Saved! " + response.url);
+                } catch (error) {
+                  setStatus("Failed to save: " + error);
+                }
+              });
+            }
+          });
+          window.opener.postMessage({ h_ready: true }, "*");
+        </script>
+      `
+    );
+  })
+  .post(
+    "/save",
+    async ({ body: { html } }) => {
+      const hash = createHash("sha256").update(html).digest("hex");
+      const key = `saved-pages/${hash}.html`;
+      const blob = new StorageBlob(key);
+      await blob.upload(Buffer.from(html));
+      return { url: "/saved/" + hash };
+    },
+    {
+      body: t.Object({
+        html: t.String(),
+      }),
+    }
+  )
+  .get(
+    "/saved/:hash",
+    async ({ params: { hash } }) => {
+      const blob = new StorageBlob(`saved-pages/${hash}.html`);
+      return new Response(await blob.download(), {
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      });
+    },
+    {
+      params: t.Object({ hash: t.String() }),
+    }
+  )
   .get(
     "/bookmarks/:id",
     async ({ params, query: { mode = "view" } }) => {
@@ -79,6 +225,7 @@ export default new Elysia()
           },
         })
       );
+      const title = getBookmarkTitle(bookmark);
       const htmlContent =
         bookmark.content.type === "link"
           ? bookmark.content.htmlContent || "No content"
@@ -115,7 +262,7 @@ export default new Elysia()
       }
       const sanitizedHtml = toHtml(sanitize(fromHtml(htmlContent)));
       return pageResponse(
-        "Bookmark",
+        "Bookmark: " + title,
         html`
           <div style="padding: 0 64px">
             <h1>${getBookmarkTitle(bookmark)}</h1>
