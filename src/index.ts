@@ -160,6 +160,13 @@ export default new Elysia()
               const footer = document.createElement("footer");
               if (article.publishedTime) {
                 footer.append(article.publishedTime);
+                const originalLink = document.createElement("a");
+                originalLink.href = url;
+                originalLink.innerText = url;
+                const originalParagraph = document.createElement("p");
+                originalParagraph.innerText = "Original link: ";
+                originalParagraph.append(originalLink);
+                footer.append(originalParagraph);
               }
 
               let byline;
