@@ -14,10 +14,10 @@ const minioClient = new Client({
 });
 
 export class StorageBlob {
-  constructor(public name: string) {}
+  constructor(public key: string) {}
   async exists(): Promise<boolean> {
     try {
-      await minioClient.statObject(STORAGE_BUCKET, this.name);
+      await minioClient.statObject(STORAGE_BUCKET, this.key);
       return true;
     } catch (error: any) {
       if (error.code === "NotFound") {
@@ -27,10 +27,10 @@ export class StorageBlob {
     }
   }
   async upload(data: Buffer): Promise<void> {
-    await minioClient.putObject(STORAGE_BUCKET, this.name, data);
+    await minioClient.putObject(STORAGE_BUCKET, this.key, data);
   }
   async download(): Promise<Buffer> {
-    const stream = await minioClient.getObject(STORAGE_BUCKET, this.name);
+    const stream = await minioClient.getObject(STORAGE_BUCKET, this.key);
     const chunks: Buffer[] = [];
     for await (const chunk of stream) {
       chunks.push(chunk);
@@ -40,7 +40,7 @@ export class StorageBlob {
   async getUrl() {
     return minioClient.presignedGetObject(
       STORAGE_BUCKET,
-      this.name,
+      this.key,
       60 * 60 * 24
     );
   }
