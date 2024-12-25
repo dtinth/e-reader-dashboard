@@ -1,4 +1,4 @@
-import type { Element, Text } from "hast";
+import type { Element } from "hast";
 import { fromHtml } from "hast-util-from-html";
 import { toText } from "hast-util-to-text";
 import { visit } from "unist-util-visit";
@@ -20,11 +20,12 @@ export async function htmlToText(htmlContent: string) {
   const tree = fromHtml(htmlContent);
 
   let listCounter = new Map<Element, number>();
+  let pendingPrefix: string | null = null;
 
-  visit(tree, "element", (node, _index, parent) => {
-    if (node.tagName === "li") {
+  visit(tree, (node, _index, parent) => {
+    if (node.type === "element" && node.tagName === "li") {
       const listParent = parent as Element;
-      const prefix =
+      pendingPrefix =
         listParent.tagName === "ol"
           ? `${(listCounter.get(listParent) || 0) + 1}. `
           : "• ";
@@ -32,16 +33,10 @@ export async function htmlToText(htmlContent: string) {
       if (listParent.tagName === "ol") {
         listCounter.set(listParent, (listCounter.get(listParent) || 0) + 1);
       }
-
-      // Prepend the prefix as a text node
-      node.children.unshift({
-        type: "text",
-        value: prefix,
-      } as Text);
-    }
-
-    // Reset counter when entering a new ordered list
-    if (node.tagName === "ol") {
+    } else if (node.type === "text" && pendingPrefix && node.value.trim()) {
+      node.value = pendingPrefix + node.value;
+      pendingPrefix = null;
+    } else if (node.type === "element" && node.tagName === "ol") {
       listCounter.set(node, 0);
     }
   });
