@@ -41,7 +41,7 @@ export class StorageBlob {
     return minioClient.presignedGetObject(
       STORAGE_BUCKET,
       this.key,
-      60 * 60 * 24
+      60 * 60 * 24 * 3
     );
   }
 }

@@ -89,26 +89,33 @@ export async function processBatchOutput(zipUrl: string) {
   };
 }
 
-export async function generateSpeechUrl(
+export interface GenerateSpeechBlobResult {
+  audio: StorageBlob;
+  sentences: StorageBlob;
+}
+
+export async function generateSpeechBlobs(
   text: string,
   voiceName = defaultVoiceName
-): Promise<string> {
+): Promise<GenerateSpeechBlobResult> {
   const hash = createHash("sha256")
     .update(text)
     .update(voiceName)
     .update("v2")
     .digest("hex");
   const audioBlob = new StorageBlob(`tts-output/${hash}.mp3`);
-  if (await audioBlob.exists()) return audioBlob.getUrl();
+  const sentencesBlob = new StorageBlob(`tts-output/${hash}.sentences.json`);
+  if (await audioBlob.exists()) {
+    return { audio: audioBlob, sentences: sentencesBlob };
+  }
   const data = await generateSpeech(text);
   const zipBlob = new StorageBlob(`tts-output/${hash}.zip`);
-  const sentencesBlob = new StorageBlob(`tts-output/${hash}.sentences.json`);
   await Promise.all([
     audioBlob.upload(Buffer.from(data.audio)),
     zipBlob.upload(Buffer.from(data.zip)),
     sentencesBlob.upload(Buffer.from(JSON.stringify(data.sentences))),
   ]);
-  return audioBlob.getUrl();
+  return { audio: audioBlob, sentences: sentencesBlob };
 }
 
 const speechStateMap = new Map<string, SpeechState>();
@@ -116,7 +123,7 @@ const speechStateMap = new Map<string, SpeechState>();
 interface SpeechState {
   status: "pending" | "done" | "error";
   started: number;
-  url?: string;
+  result?: GenerateSpeechBlobResult;
   error?: string;
 }
 
@@ -126,7 +133,7 @@ export function getSpeechState(text: string) {
     const state: SpeechState = { status: "pending", started: Date.now() };
     const work = async () => {
       try {
-        state.url = await generateSpeechUrl(text);
+        state.result = await generateSpeechBlobs(text);
         state.status = "done";
       } catch (error: any) {
         console.error(error);

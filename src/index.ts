@@ -4,6 +4,7 @@ import Elysia, { redirect, t } from "elysia";
 import { fromHtml } from "hast-util-from-html";
 import { sanitize } from "hast-util-sanitize";
 import { toHtml } from "hast-util-to-html";
+import { audioPlayer } from "./audioPlayer";
 import { getBookmark, hoarder, type Bookmark } from "./hoarder";
 import { htmlToText } from "./htmlToText";
 import { fragmentResponse, pageResponse } from "./pageResponse";
@@ -273,16 +274,7 @@ export default new Elysia()
         const state = getSpeechState(text);
         return fragmentResponse(
           state.status === "done"
-            ? html`
-                <div>
-                  <audio
-                    controls
-                    autoplay
-                    src="${state.url}"
-                    style="box-sizing: border-box; width: 100%;"
-                  ></audio>
-                </div>
-              `
+            ? audioPlayer({ result: state.result! })
             : state.status === "error"
             ? html`<div>${state.error}</div>`
             : html`<div

@@ -51,6 +51,10 @@ export async function pageResponse(
         </style>
         <title>${title}</title>
         <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.4/dist/htmx.min.js"></script>
+        <script
+          defer
+          src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+        ></script>
       </head>
       <body>
         ${header}
