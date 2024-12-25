@@ -41,7 +41,7 @@ export async function htmlToText(htmlContent: string) {
     }
   });
 
-  const text = toText(tree);
+  const text = toText(tree).replaceAll(/\s+ๆ/g, "ๆ");
   await resultCacheStorage.set(htmlContent, text);
   return text;
 }

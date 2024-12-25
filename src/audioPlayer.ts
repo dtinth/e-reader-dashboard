@@ -22,7 +22,7 @@ export function audioPlayer(props: { result: GenerateSpeechBlobResult }) {
         onTimeUpdate() {
           const audio = this.$refs.audio;
           if (!audio) return;
-          // this.updateCurrentSentence(audio.currentTime * 1000);
+          this.updateCurrentSentence(audio.currentTime * 1000);
         },
         seek(seconds) {
           const audio = this.$refs.audio;
@@ -30,16 +30,27 @@ export function audioPlayer(props: { result: GenerateSpeechBlobResult }) {
           audio.currentTime = Math.max(0, audio.currentTime + seconds);
         },
         updateCurrentSentence(timeMs) {
-          const items = this.$refs.scroller.querySelectorAll('li');
-          items.forEach(item => {
-            const offset = +item.dataset.audioOffset;
-            const duration = +item.dataset.duration;
-            if (timeMs >= offset && timeMs < offset + duration) {
-              item.style.backgroundColor = '#fff3d4';
-            } else {
-              item.style.backgroundColor = '';
+          if (!this.sentenceElements) {
+            const items = this.$refs.scroller.querySelectorAll('li');
+            if (items.length === 0) return;
+            this.sentenceElements = Array.from(items, (element) => ({
+              element,
+              audioOffset: +element.dataset.audioOffset,
+              duration: +element.dataset.duration,
+            }));
+          }
+          const currentSentenceElement = this.sentenceElements.find(
+            (item) => timeMs >= item.audioOffset && timeMs < item.audioOffset + item.duration
+          )?.element;
+          if (currentSentenceElement !== this.currentSentenceElement) {
+            if (this.currentSentenceElement) {
+              this.currentSentenceElement.style.backgroundColor = '';
             }
-          });
+            if (currentSentenceElement) {
+              currentSentenceElement.style.backgroundColor = 'yellow';
+            }
+            this.currentSentenceElement = currentSentenceElement;
+          }
         },
         scrollToCurrent() {
           const audio = this.$refs.audio;
