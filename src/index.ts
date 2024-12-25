@@ -4,8 +4,8 @@ import Elysia, { redirect, t } from "elysia";
 import { fromHtml } from "hast-util-from-html";
 import { sanitize } from "hast-util-sanitize";
 import { toHtml } from "hast-util-to-html";
-import { toText } from "hast-util-to-text";
-import { hoarder, type Bookmark } from "./hoarder";
+import { getBookmark, hoarder, type Bookmark } from "./hoarder";
+import { htmlToText } from "./htmlToText";
 import { fragmentResponse, pageResponse } from "./pageResponse";
 import { StorageBlob } from "./storage";
 import { getSpeechState } from "./tts";
@@ -257,20 +257,19 @@ export default new Elysia()
   .get(
     "/bookmarks/:id",
     async ({ params, query: { mode = "view" } }) => {
-      const bookmark = unwrap(
-        await hoarder.GET("/bookmarks/{bookmarkId}", {
-          params: {
-            path: { bookmarkId: params.id },
-          },
-        })
-      );
+      const bookmark = await getBookmark(params.id);
       const title = getBookmarkTitle(bookmark);
       const htmlContent =
         bookmark.content.type === "link"
           ? bookmark.content.htmlContent || "No content"
           : `Unsupported content type: ${bookmark.content.type}`;
-      if (mode === "listen") {
-        const text = toText(fromHtml(htmlContent));
+      if (mode === "text") {
+        const text = await htmlToText(htmlContent);
+        return new Response(text, {
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        });
+      } else if (mode === "listen") {
+        const text = await htmlToText(htmlContent);
         const state = getSpeechState(text);
         return fragmentResponse(
           state.status === "done"
@@ -298,64 +297,67 @@ export default new Elysia()
                 elapsed)
               </div>`
         );
-      }
-      const sanitizedHtml = toHtml(sanitize(fromHtml(htmlContent)));
-      return pageResponse(
-        "Bookmark: " + title,
-        html`
-          <div style="padding: 0 64px">
-            <h1>${getBookmarkTitle(bookmark)}</h1>
-            <div id="listening-controls">
-              <button
-                onclick="this.innerText = 'Loading...'; this.disabled = true;"
-                hx-get="/bookmarks/${bookmark.id}?mode=listen"
-                hx-target="#listening-controls"
-                hx-swap="innerHTML"
-              >
-                Listen
-              </button>
+      } else {
+        const sanitizedHtml = toHtml(sanitize(fromHtml(htmlContent)));
+        return pageResponse(
+          "Bookmark: " + title,
+          html`
+            <div style="padding: 0 64px">
+              <h1>${getBookmarkTitle(bookmark)}</h1>
+              <div id="listening-controls">
+                <button
+                  onclick="this.innerText = 'Loading...'; this.disabled = true;"
+                  hx-get="/bookmarks/${bookmark.id}?mode=listen"
+                  hx-target="#listening-controls"
+                  hx-swap="innerHTML"
+                >
+                  Listen
+                </button>
+              </div>
+              <div>${{ __html: sanitizedHtml }}</div>
             </div>
-            <div>${{ __html: sanitizedHtml }}</div>
-          </div>
-          <style>
-            .scrollButton {
-              position: fixed;
-              top: 0;
-              bottom: 0;
-              width: 64px;
-              display: flex;
-              justify-content: center;
-              align-items: center;
-              font-size: 24px;
-              margin: 0;
-              background: transparent !important;
-            }
-          </style>
-          <button style="right: 0;" class="scrollButton" id="downButton">
-            ⬇︎
-          </button>
-          <button style="left: 0;" class="scrollButton" id="upButton">
-            ⬆︎
-          </button>
-          <script>
-            document
-              .getElementById("downButton")
-              .addEventListener("click", () => {
-                window.scrollBy(0, window.innerHeight * 0.8);
-              });
-            document
-              .getElementById("upButton")
-              .addEventListener("click", () => {
-                window.scrollBy(0, -window.innerHeight * 0.8);
-              });
-          </script>
-        `
-      );
+            <style>
+              .scrollButton {
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                width: 64px;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                font-size: 24px;
+                margin: 0;
+                background: transparent !important;
+              }
+            </style>
+            <button style="right: 0;" class="scrollButton" id="downButton">
+              ⬇︎
+            </button>
+            <button style="left: 0;" class="scrollButton" id="upButton">
+              ⬆︎
+            </button>
+            <script>
+              document
+                .getElementById("downButton")
+                .addEventListener("click", () => {
+                  window.scrollBy(0, window.innerHeight * 0.8);
+                });
+              document
+                .getElementById("upButton")
+                .addEventListener("click", () => {
+                  window.scrollBy(0, -window.innerHeight * 0.8);
+                });
+            </script>
+          `
+        );
+      }
     },
     {
       params: t.Object({ id: t.String() }),
       query: t.Object({
-        mode: t.Optional(t.Union([t.Literal("view"), t.Literal("listen")])),
+        mode: t.Optional(
+          t.Union([t.Literal("view"), t.Literal("listen"), t.Literal("text")])
+        ),
       }),
     }
   );
