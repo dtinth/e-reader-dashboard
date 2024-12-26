@@ -1,0 +1,28 @@
+name: Build & Publish
+on:
+  push:
+    branches: [main]
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push Docker images
+        uses: iloveitaly/github-action-nixpacks@1015581ad805f3829ad4bdd5deb892e3b5c525b8
+        with:
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:latest
+          platforms: "linux/amd64,linux/arm64"
+          cache: true
+          cache_tag: ${{ env.IMAGE_NAME }}:latest
