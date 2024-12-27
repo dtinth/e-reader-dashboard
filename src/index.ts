@@ -81,44 +81,37 @@ export default new Elysia()
       return redirect("/auth/login");
     }
   })
+  .get("/css", async ({ set }) => {
+    set.headers["cache-control"] = "public, max-age=300";
+    set.headers["content-type"] = "text/css; charset=utf-8";
+    return new StorageBlob("custom.css").download().then((r) => r.toString());
+  })
   .get("/", async () => {
-    return pageResponse(
-      "app",
-      html`
-        <h1>Bookmarks</h1>
-        <div
-          hx-get="/bookmarks"
-          hx-swap="outerHTML"
-          hx-trigger="load"
-          style="text-align: center"
+    return pageResponse("Dashboard", html``, {
+      header: html` <div
+          id="now"
+          style="font-size: 32vw; line-height: 1; text-align: center;"
         >
-          Loading bookmarks...
+          …
         </div>
-      `,
-      {
-        header: html` <div
-            id="now"
-            style="font-size: 32vw; line-height: 1; text-align: center;"
-          >
-            …
-          </div>
-          <script>
-            const updateNow = () => {
-              const h = new Date().getHours();
-              const m = new Date().getMinutes();
-              document.getElementById("now").innerText =
-                h + ":" + String(m).padStart(2, "0");
-            };
-            setInterval(updateNow, 5000);
-            updateNow();
-          </script>`,
-      }
-    );
+        <script>
+          const updateNow = () => {
+            const h = new Date().getHours();
+            const m = new Date().getMinutes();
+            document.getElementById("now").innerText =
+              h + ":" + String(m).padStart(2, "0");
+          };
+          setInterval(updateNow, 5000);
+          updateNow();
+        </script>`,
+    });
   })
   .get("/bookmarks", async () => {
     const { bookmarks } = unwrap(await hoarder.GET("/bookmarks"));
-    return fragmentResponse(
+    return pageResponse(
+      "Bookmarks",
       html`
+        <h1>Bookmarks</h1>
         <ul>
           ${bookmarks.map((bookmark) => {
             const title = getBookmarkTitle(bookmark);

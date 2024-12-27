@@ -15,6 +15,7 @@ export async function pageResponse(
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/water.css@2/out/light.css"
         />
+        <link rel="stylesheet" href="/css" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
@@ -47,6 +48,10 @@ export async function pageResponse(
             max-width: 800px;
             margin: 20px auto;
             padding: 0 10px;
+          }
+          pre > code {
+            font-size: 14px;
+            white-space: pre-wrap;
           }
         </style>
         <title>${title}</title>
