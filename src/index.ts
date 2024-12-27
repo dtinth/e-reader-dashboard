@@ -325,12 +325,12 @@ export default new Elysia()
               document
                 .getElementById("downButton")
                 .addEventListener("click", () => {
-                  window.scrollBy(0, window.innerHeight * 0.8);
+                  window.scrollBy(0, window.innerHeight * 0.5);
                 });
               document
                 .getElementById("upButton")
                 .addEventListener("click", () => {
-                  window.scrollBy(0, -window.innerHeight * 0.8);
+                  window.scrollBy(0, -window.innerHeight * 0.5);
                 });
             </script>
           `
