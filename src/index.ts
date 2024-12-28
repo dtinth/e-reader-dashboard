@@ -5,6 +5,14 @@ import { fromHtml } from "hast-util-from-html";
 import { sanitize } from "hast-util-sanitize";
 import { toHtml } from "hast-util-to-html";
 import { audioPlayer } from "./audioPlayer";
+import {
+  acEntity,
+  activateScene,
+  getEntityStates,
+  lightSceneEntities,
+  turnOffSwitch,
+  turnOnSwitch,
+} from "./hass";
 import { getBookmark, hoarder, type Bookmark } from "./hoarder";
 import { htmlToText } from "./htmlToText";
 import { fragmentResponse, pageResponse } from "./pageResponse";
@@ -88,7 +96,8 @@ export default new Elysia()
   })
   .get("/", async () => {
     return pageResponse("Dashboard", html``, {
-      header: html` <style>
+      header: html`
+        <style>
           :root {
             --text-main: #fff;
             --links: #fff;
@@ -114,6 +123,14 @@ export default new Elysia()
             …
           </div>
         </div>
+        <div style="display: flex; justify-content: center;">
+          <div
+            style="line-height: 1.2; padding: 0 16px; font-style: italic; font-size: 12vw; padding-bottom: 0.5em;"
+          >
+            <div id="dow"></div>
+            <div id="day"></div>
+          </div>
+        </div>
         <script>
           const updateNow = () => {
             const h = new Date().getHours();
@@ -127,12 +144,155 @@ export default new Elysia()
             )) {
               el.innerHTML = html;
             }
+            const dow = new Intl.DateTimeFormat("en-US", {
+              weekday: "long",
+            }).format(new Date());
+            const day = new Intl.DateTimeFormat("en-US", {
+              day: "numeric",
+              month: "long",
+            }).format(new Date());
+            document.getElementById("dow").innerText = dow;
+            document.getElementById("day").innerText = day;
           };
           setInterval(updateNow, 5000);
           updateNow();
-        </script>`,
+        </script>
+
+        <style>
+          .hass {
+            padding: 0 16px;
+            font-size: 16px;
+          }
+          .hass table {
+            width: 100%;
+            table-layout: fixed;
+          }
+          .hass button {
+            display: block;
+            width: 100%;
+            padding: 0.5em 0;
+            margin: 0;
+            background: transparent !important;
+            color: white;
+            border: 2px solid #fff;
+          }
+          .hass th {
+            padding-bottom: 0;
+          }
+          .hass td[data-active="true"] button {
+            background: white !important;
+            color: black;
+          }
+        </style>
+
+        <div
+          data-light-presets="${JSON.stringify(lightSceneEntities)}"
+          x-data="{
+            lightPresets: JSON.parse($el.dataset.lightPresets),
+            ac: '',
+            lights: '',
+            async init() {
+              this.timer = setInterval(() => this.load(), 15000)
+              await this.load()
+            },
+            destroy() {
+              clearInterval(this.timer)
+            },
+            async load() {
+              const result = await fetch('/hass/status').then(r => r.json())
+              this.ac = result.ac
+              this.lights = result.lights
+            },
+            async setLights(entityId) {
+              this.lights = entityId
+              await fetch('/hass/lights', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ entityId }),
+              })
+            },
+            async setAc(state) {
+              this.ac = state
+              await fetch('/hass/ac', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ state }),
+              })
+            },
+          }"
+          class="hass"
+        >
+          <table>
+            <tr>
+              <th :colspan="Object.keys(lightPresets).length">Lights</th>
+              <td width="10" rowspan="2"></td>
+              <th colspan="2">AC</th>
+            </tr>
+            <tr>
+              <template
+                x-for="[entityId, name] of Object.entries(lightPresets)"
+              >
+                <td :data-active="lights === entityId">
+                  <button @click="setLights(entityId)" x-text="name"></button>
+                </td>
+              </template>
+              <td :data-active="ac == 'off'">
+                <button @click="setAc('off')">Off</button>
+              </td>
+              <td :data-active="ac == 'on'">
+                <button @click="setAc('on')">On</button>
+              </td>
+            </tr>
+          </table>
+        </div>
+      `,
     });
   })
+  .get("/hass/status", async () => {
+    const states = await getEntityStates();
+    const map = new Map(states.map((state) => [state.entity_id, state]));
+    const lightPresets = Object.keys(lightSceneEntities).map((entityId) => {
+      return { entityId, state: map.get(entityId) };
+    });
+    const acState = map.get(acEntity);
+    lightPresets.sort((a, b) => {
+      const aK = a.state?.state || "0";
+      const bK = b.state?.state || "0";
+      return bK.localeCompare(aK);
+    });
+    return { ac: acState?.state, lights: lightPresets[0]?.entityId };
+  })
+  .post(
+    "/hass/lights",
+    async ({ body: { entityId } }) => {
+      if (lightSceneEntities.hasOwnProperty(entityId)) {
+        await activateScene(entityId);
+        return { ok: true };
+      } else {
+        return { error: "Invalid entityId" };
+      }
+    },
+    { body: t.Object({ entityId: t.String() }) }
+  )
+  .post(
+    "/hass/ac",
+    async ({ body: { state } }) => {
+      if (state === "on") {
+        await turnOnSwitch(acEntity);
+        return { ok: true };
+      } else if (state === "off") {
+        await turnOffSwitch(acEntity);
+        return { ok: true };
+      } else {
+        return { error: "Invalid state" };
+      }
+    },
+    { body: t.Object({ state: t.String() }) }
+  )
   .get("/viewport", async () => {
     return pageResponse(
       "Dashboard",
