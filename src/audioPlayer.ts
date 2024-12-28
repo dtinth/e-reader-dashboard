@@ -7,6 +7,15 @@ export function audioPlayer(props: { result: GenerateSpeechBlobResult }) {
     .then((b) => b.toString());
   return html`<div>
     <div>Audio has been generated</div>
+    <style>
+      .transcript-sentence {
+        padding: 0 8px;
+      }
+      .transcript-sentence[data-active="true"] {
+        background: black;
+        color: white;
+      }
+    </style>
     <div
       data-sentences="${sentencesPromise}"
       x-data="{
@@ -43,11 +52,27 @@ export function audioPlayer(props: { result: GenerateSpeechBlobResult }) {
             (item) => timeMs >= item.audioOffset && timeMs < item.audioOffset + item.duration
           )?.element;
           if (currentSentenceElement !== this.currentSentenceElement) {
+            const scrollerBox = this.$refs.scroller.getBoundingClientRect();
+            const isOverlapping = (containerBox, itemBox) => {
+              return Math.min(containerBox.bottom, itemBox.bottom) - Math.max(containerBox.top, itemBox.top) > 0;
+            }
+            const isEnclosed = (containerBox, itemBox) => {
+              return Math.min(containerBox.bottom, itemBox.bottom) - Math.max(containerBox.top, itemBox.top) === itemBox.height;
+            }
             if (this.currentSentenceElement) {
-              this.currentSentenceElement.style.backgroundColor = '';
+              const previousSentenceBox = this.currentSentenceElement.getBoundingClientRect();
+              this.currentSentenceElement.dataset.active = 'false';
+              this.allowScrolling = isOverlapping(scrollerBox, previousSentenceBox);
             }
             if (currentSentenceElement) {
-              currentSentenceElement.style.backgroundColor = 'yellow';
+              const newSentenceBox = currentSentenceElement.getBoundingClientRect();
+              currentSentenceElement.dataset.active = 'true';
+              if (this.allowScrolling) {
+                if (!isEnclosed(scrollerBox, newSentenceBox)) {
+                  this.$refs.scroller.scrollTop += newSentenceBox.top - scrollerBox.top;
+                  this.allowScrolling = false;
+                }
+              }
             }
             this.currentSentenceElement = currentSentenceElement;
           }
@@ -66,6 +91,11 @@ export function audioPlayer(props: { result: GenerateSpeechBlobResult }) {
           if (currentItem) {
             currentItem.scrollIntoView({ behavior: 'instant', block: 'center' });
           }
+        },
+        formatAudioOffset(offset) {
+          const minutes = Math.floor(offset / 60000);
+          const seconds = Math.floor((offset % 60000) / 1000);
+          return \`[\${minutes}:\${seconds.toString().padStart(2, '0')}]\`
         }
       }"
     >
@@ -93,13 +123,18 @@ export function audioPlayer(props: { result: GenerateSpeechBlobResult }) {
           x-ref="audio"
           x-on:timeupdate="onTimeUpdate()"
         ></audio>
-        <div style="max-height: 200px; overflow-y: auto;" x-ref="scroller">
-          <ul>
+        <div
+          style="max-height: clamp(180px,50vh,500px); overflow-y: auto; margin: 0 -8px;"
+          x-ref="scroller"
+        >
+          <ul style="padding: 0; margin: 0; list-style: none;">
             <template x-for="sentence of sentences">
               <li
                 x-bind:data-audio-offset="sentence.AudioOffset"
                 x-bind:data-duration="sentence.Duration"
+                class="transcript-sentence"
               >
+                <small x-text="formatAudioOffset(sentence.AudioOffset)"></small>
                 <span x-text="sentence.Text"></span>
               </li>
             </template>

@@ -494,7 +494,7 @@ export default new Elysia()
         return pageResponse(
           "Bookmark: " + title,
           html`
-            <div style="padding: 0 64px">
+            <div style="padding: 0 3rem">
               <h1>${getBookmarkTitle(bookmark)}</h1>
               <div id="listening-controls">
                 <button
@@ -509,37 +509,79 @@ export default new Elysia()
               <div>${{ __html: sanitizedHtml }}</div>
             </div>
             <style>
-              .scrollButton {
+              .scroller-side {
                 position: fixed;
-                top: 0;
-                bottom: 0;
-                width: 64px;
+                top: 25%;
+                bottom: 25%;
+                width: 2.5rem;
+                display: flex;
+                flex-direction: column;
+                border: 1px solid black;
+                border-width: 1px 0;
+              }
+              .scroller-side button {
                 display: flex;
                 justify-content: center;
                 align-items: center;
                 font-size: 24px;
                 margin: 0;
+                padding: 0;
                 background: transparent !important;
+                flex: 1;
+                box-shadow: none !important;
+              }
+              .scroll-percentage {
+                position: absolute;
+                top: 50%;
+                right: 0;
+                left: 0;
+                text-align: center;
+                transform: translateY(-50%);
+                pointer-events: none;
+                font-size: 12px;
               }
             </style>
-            <button style="right: 0;" class="scrollButton" id="downButton">
-              ⬇︎
-            </button>
-            <button style="left: 0;" class="scrollButton" id="upButton">
-              ⬆︎
-            </button>
             <script>
-              document
-                .getElementById("downButton")
-                .addEventListener("click", () => {
-                  window.scrollBy(0, window.innerHeight * 0.5);
-                });
-              document
-                .getElementById("upButton")
-                .addEventListener("click", () => {
-                  window.scrollBy(0, -window.innerHeight * 0.5);
-                });
+              document.addEventListener("alpine:init", () => {
+                Alpine.data("scroller", () => ({
+                  down() {
+                    window.scrollBy(0, window.innerHeight * 0.5);
+                  },
+                  up() {
+                    window.scrollBy(0, -window.innerHeight * 0.5);
+                  },
+                  percentage: "0%",
+                  init() {
+                    const onScroll = () => {
+                      const percentage =
+                        (
+                          Math.min(
+                            1,
+                            window.scrollY /
+                              (document.body.scrollHeight - window.innerHeight)
+                          ) * 100
+                        ).toFixed(0) + "%";
+                      this.percentage = percentage;
+                    };
+                    window.addEventListener("scroll", onScroll);
+                    this.destroy = () => {
+                      window.removeEventListener("scroll", onScroll);
+                    };
+                  },
+                }));
+              });
             </script>
+            <div x-data="scroller">
+              <div class="scroller-side" style="left: 0">
+                <button @click="up">⬆︎</button>
+                <button @click="down">⬇︎</button>
+              </div>
+              <div class="scroller-side" style="right: 0">
+                <button @click="up">⬆︎</button>
+                <button @click="down">⬇︎</button>
+                <div class="scroll-percentage" x-text="percentage"></div>
+              </div>
+            </div>
           `
         );
       }

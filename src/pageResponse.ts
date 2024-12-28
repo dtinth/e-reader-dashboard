@@ -30,7 +30,6 @@ export async function pageResponse(
               "Apple Color Emoji", "Noto Color Emoji", sans-serif;
             letter-spacing: 0.04ch;
             line-height: 1.6;
-            font-size: 20px;
           }
           code {
             font-family: var(--font-monospace);
@@ -39,6 +38,12 @@ export async function pageResponse(
             --font-monospace: var(--font-monospace-override, monospace);
             --text-main: #000;
             --links: #000;
+            font-size: 20px;
+          }
+          @media (max-width: 399px) {
+            :root {
+              font-size: 16px;
+            }
           }
           a {
             text-decoration: underline;
