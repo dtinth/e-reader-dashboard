@@ -90,7 +90,7 @@ export default new Elysia()
     return pageResponse("Dashboard", html``, {
       header: html` <div
           id="now"
-          style="font-size: 32vw; line-height: 1; text-align: center;"
+          style="font-size: 32vw; line-height: 1.25; text-align: center; letter-spacing: 0; font-family: var(--font-monospace);"
         >
           …
         </div>
@@ -98,8 +98,10 @@ export default new Elysia()
           const updateNow = () => {
             const h = new Date().getHours();
             const m = new Date().getMinutes();
-            document.getElementById("now").innerText =
-              h + ":" + String(m).padStart(2, "0");
+            document.getElementById("now").innerHTML =
+              h +
+              "<span style='display: inline-block; margin: 0 -0.125ch; font-weight: normal;'>:</span>" +
+              String(m).padStart(2, "0");
           };
           setInterval(updateNow, 5000);
           updateNow();

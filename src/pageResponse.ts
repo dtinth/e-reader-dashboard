@@ -32,7 +32,11 @@ export async function pageResponse(
             line-height: 1.6;
             font-size: 20px;
           }
+          code {
+            font-family: var(--font-monospace);
+          }
           :root {
+            --font-monospace: var(--font-monospace-override, monospace);
             --text-main: #000;
             --links: #000;
           }
