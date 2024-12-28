@@ -133,6 +133,25 @@ export default new Elysia()
         </script>`,
     });
   })
+  .get("/viewport", async () => {
+    return pageResponse(
+      "Dashboard",
+      html`
+        <div id="viewport"></div>
+        <script>
+          const updateViewport = () => {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const html =
+              width + " x " + height + "<br>" + window.devicePixelRatio + "x";
+            document.getElementById("viewport").innerHTML = html;
+          };
+          window.addEventListener("resize", updateViewport);
+          updateViewport();
+        </script>
+      `
+    );
+  })
   .get("/bookmarks", async () => {
     const { bookmarks } = unwrap(await hoarder.GET("/bookmarks"));
     return pageResponse(
