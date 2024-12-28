@@ -170,18 +170,19 @@ export default new Elysia()
           .hass button {
             display: block;
             width: 100%;
-            padding: 0.5em 0;
+            padding: 0.56em 0 0.72em;
             margin: 0;
             background: transparent !important;
             color: white;
-            border: 2px solid #fff;
+            border: 0;
+            box-shadow: inset 0 0 0 1px white;
           }
           .hass th {
             padding-bottom: 0;
           }
           .hass td[data-active="true"] button {
-            background: white !important;
-            color: black;
+            box-shadow: inset 0 0 0 2px white;
+            font-weight: bold;
           }
         </style>
 
