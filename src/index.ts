@@ -88,20 +88,45 @@ export default new Elysia()
   })
   .get("/", async () => {
     return pageResponse("Dashboard", html``, {
-      header: html` <div
+      header: html` <style>
+          :root {
+            --text-main: #fff;
+            --links: #fff;
+            --background-body: #000;
+            --background: #000;
+          }
+        </style>
+        <div
           id="now"
-          style="font-size: 32vw; line-height: 1.25; text-align: center; letter-spacing: 0; font-family: var(--font-monospace);"
+          style="font-weight: bold; font-size: 32vw; line-height: 1.25em; text-align: center; letter-spacing: 0; font-family: var(--font-monospace); position: relative;"
         >
-          …
+          <div
+            data-now-text
+            style="position: absolute; top: 0; left: 0; right: 0; transform: translate(0.1ex, 0.1ex); opacity: 0.5;
+              mask-image: repeating-linear-gradient(-45deg, transparent, transparent 0.01em, black 0.01em, black 0.015em);"
+          >
+            …
+          </div>
+          <div
+            data-now-text
+            style="position: relative; text-shadow: 0.05ex 0.05ex 0 black;"
+          >
+            …
+          </div>
         </div>
         <script>
           const updateNow = () => {
             const h = new Date().getHours();
             const m = new Date().getMinutes();
-            document.getElementById("now").innerHTML =
+            const html =
               h +
               "<span style='display: inline-block; margin: 0 -0.125ch; font-weight: normal;'>:</span>" +
               String(m).padStart(2, "0");
+            for (const el of document.querySelectorAll(
+              "#now [data-now-text]"
+            )) {
+              el.innerHTML = html;
+            }
           };
           setInterval(updateNow, 5000);
           updateNow();
