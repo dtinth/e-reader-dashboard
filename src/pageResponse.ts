@@ -19,15 +19,24 @@ export async function pageResponse(
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
         <link
-          href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800&family=TASA+Orbiter:wght@400..800&display=swap"
           rel="stylesheet"
         />
+
         <style>
-          body {
-            font-family: Sarabun, system-ui, -apple-system, BlinkMacSystemFont,
+          :root {
+            --font-ui: TASA Orbiter, Sarabun, system-ui, -apple-system,
+              BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+              "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+              "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji",
+              sans-serif;
+            --font-body: Sarabun, system-ui, -apple-system, BlinkMacSystemFont,
               "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans",
               "Droid Sans", "Helvetica Neue", "Segoe UI Emoji",
               "Apple Color Emoji", "Noto Color Emoji", sans-serif;
+          }
+          body {
+            font-family: var(--font-ui);
             letter-spacing: 0.04ch;
             line-height: 1.6;
           }

@@ -11,19 +11,55 @@ export function homepage() {
           --links: #fff;
           --background-body: #000;
           --background: #000;
+          --clock-scale: 1;
+        }
+        .left-panel {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 50%;
+          bottom: 0;
+          background: black;
+          color: white;
+          overflow-y: auto;
+          overflow-x: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+        .right-panel {
+          position: absolute;
+          top: 0;
+          left: 50%;
+          right: 0;
+          bottom: 0;
+          background: white;
+          color: black;
+          overflow-y: auto;
+          overflow-x: hidden;
+          padding: 0 16px;
+          display: flex;
+          flex-direction: column;
+        }
+        .clock-container {
+          flex: 1;
+          cursor: pointer;
+        }
+        body[data-clock-fullscreen] {
+          --clock-scale: 2;
+        }
+        body[data-clock-fullscreen] .left-panel {
+          right: 0;
+        }
+        body[data-clock-fullscreen] .right-panel,
+        body[data-clock-fullscreen] .hass-container {
+          display: none;
         }
       </style>
-      <div
-        style="position: absolute; top: 0; left: 0; right: 50%; bottom: 0; background: black; color: white; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column;"
-      >
-        <div style="flex: 1">${renderClock()}</div>
-        <div>${renderHass()}</div>
+      <div class="left-panel">
+        <div class="clock-container">${renderClock()}</div>
+        <div class="hass-container">${renderHass()}</div>
       </div>
-      <div
-        style="position: absolute; top: 0; left: 50%; right: 0; bottom: 0; background: white; color: black; overflow-y: auto; overflow-x: hidden; padding: 0 16px; display: flex; flex-direction: column;"
-      >
-        ${renderProductivity()}
-      </div>
+      <div class="right-panel">${renderProductivity()}</div>
     `,
   });
 }
@@ -31,7 +67,7 @@ export function homepage() {
 function renderClock() {
   return html`<div
       id="now"
-      style="font-weight: bold; font-size: 16vw; line-height: 1.25em; text-align: center; letter-spacing: 0; font-family: var(--font-monospace); position: relative;"
+      style="font-weight: bold; font-size: calc(16vw * var(--clock-scale)); line-height: 1.15em; text-align: center; letter-spacing: 0; font-family: var(--font-monospace); position: relative;"
     >
       <div
         data-now-text
@@ -49,7 +85,7 @@ function renderClock() {
     </div>
     <div style="display: flex; justify-content: center;">
       <div
-        style="line-height: 1.2; padding: 0 16px; font-style: italic; font-size: 6vw; padding-bottom: 0.5em;"
+        style="line-height: 1.2; padding: 0 16px; font-style: italic; font-size: calc(6vw * var(--clock-scale)); padding-bottom: 0.5em; font-family: var(--font-body);"
       >
         <div id="dow"></div>
         <div id="day"></div>
@@ -60,7 +96,7 @@ function renderClock() {
         const h = new Date().getHours();
         const m = new Date().getMinutes();
         const html =
-          h +
+          String(h).padStart(2, "0") +
           "<span style='display: inline-block; margin: 0 -0.125ch; font-weight: normal;'>:</span>" +
           String(m).padStart(2, "0");
         for (const el of document.querySelectorAll("#now [data-now-text]")) {
@@ -78,6 +114,17 @@ function renderClock() {
       };
       setInterval(updateNow, 5000);
       updateNow();
+
+      // Fullscreen toggle
+      document
+        .querySelector(".clock-container")
+        .addEventListener("click", () => {
+          if (document.body.hasAttribute("data-clock-fullscreen")) {
+            document.body.removeAttribute("data-clock-fullscreen");
+          } else {
+            document.body.setAttribute("data-clock-fullscreen", "");
+          }
+        });
     </script>`;
 }
 
