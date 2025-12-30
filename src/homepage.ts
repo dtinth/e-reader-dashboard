@@ -183,16 +183,23 @@ function renderProductivity() {
       <ul style="list-style: none; padding: 0; margin: 0; font-size: 16px;">
         <template x-for="task in tasks" :key="task.id">
           <li
-            style="padding: 8px 0; border-bottom: 1px solid #ccc; font-size: 1.25em; display: flex;"
+            style="padding: 8px 0; border-bottom: 1px solid #ccc; display: flex;"
           >
             <!-- Checkbox -->
-            <input
-              type="checkbox"
-              :checked="task.status === 'completed'"
-              style="margin-right: 12px; margin-top: 8px;"
-            />
+            <div style="margin-right: 8px;">
+              <template x-if="task.completed">
+                <span>☑️</span>
+              </template>
+              <template x-if="!task.completed">
+                <span>⬜</span>
+              </template>
+            </div>
             <!-- Task title -->
-            <span x-text="task.title" style="flex: 1;"></span>
+            <span
+              x-text="task.title"
+              style="flex: 1;"
+              :style="task.completed ? 'opacity: 0.5' : ''"
+            ></span>
           </li>
         </template>
       </ul>
