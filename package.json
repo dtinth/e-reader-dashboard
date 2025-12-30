@@ -5,7 +5,7 @@
   "devDependencies": {
     "@tsconfig/bun": "^1.0.7",
     "@types/bun": "latest",
-    "@types/node": "^22.10.2",
+    "@types/node": "^24.10.4",
     "openapi-typescript": "^7.4.4",
     "vitest": "^2.1.8"
   },
