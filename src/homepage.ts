@@ -3,6 +3,7 @@ import { html, type Html } from "@thai/html";
 import { lightSceneEntities } from "./hass";
 import Home from "@iconify-icons/lucide/home";
 import TrainFront from "@iconify-icons/lucide/train-front";
+import ListChecks from "@iconify-icons/lucide/list-checks";
 
 export function homepage() {
   return pageResponse("Dashboard", html``, {
@@ -13,6 +14,13 @@ export function homepage() {
         crossorigin="anonymous"
         async
       ></script>
+      <script>
+        document.addEventListener("alpine:init", () => {
+          Alpine.data("tabs", (initialTab = null) => ({
+            currentTab: initialTab,
+          }));
+        });
+      </script>
       <style>
         :root {
           --text-main: #fff;
@@ -42,11 +50,12 @@ export function homepage() {
           bottom: 0;
           background: white;
           color: black;
-          overflow-y: auto;
-          overflow-x: hidden;
-          padding: 0 16px;
           display: flex;
           flex-direction: column;
+          --text-main: #000;
+          --links: #f00;
+          --background-body: #fff;
+          --background: #fff;
         }
         .clock-container {
           flex: 1;
@@ -65,14 +74,14 @@ export function homepage() {
       </style>
       <div class="left-panel">
         <div class="clock-container">${renderClock()}</div>
-        <div class="tabs-container">${renderTabs()}</div>
+        <div class="tabs-container">${renderLeftTabs()}</div>
       </div>
-      <div class="right-panel">${renderProductivity()}</div>
+      <div class="right-panel">${renderRightTabs()}</div>
     `,
   });
 }
 
-function renderTabs() {
+function renderLeftTabs() {
   const tabs: {
     id: string;
     icon: any;
@@ -115,13 +124,6 @@ function renderTabs() {
         <div style="border-top: 1px solid #fff; flex: 1;"></div>
       </div>
     </div>
-    <script>
-      document.addEventListener("alpine:init", () => {
-        Alpine.data("tabs", () => ({
-          currentTab: null,
-        }));
-      });
-    </script>
     <style>
       .home-tabs--tab {
         border-top: 1px solid #fff;
@@ -133,6 +135,70 @@ function renderTabs() {
       .home-tabs--tab-button {
         border-top: 1px solid #fff;
         border-right: 1px solid #fff;
+        padding: 12px;
+        display: flex;
+      }
+    </style>`;
+}
+
+function renderRightTabs() {
+  const tabs: {
+    id: string;
+    icon: any;
+    content: Html;
+    script?: Html;
+  }[] = [
+    {
+      id: "productivity",
+      icon: ListChecks,
+      ...renderProductivity(),
+    },
+  ];
+  return html`<div x-data="tabs('productivity')" class="right-tabs">
+      <!-- Tabs -->
+      ${tabs.map(
+        (tab) => html`
+          <template x-if="currentTab === '${tab.id}'">
+            <div class="right-tabs--tab">${tab.content}</div>
+          </template>
+          ${tab.script ?? ""}
+        `
+      )}
+      <template x-if="!currentTab">
+        <div class="right-tabs--tab"></div>
+      </template>
+
+      <!-- Tab Bar -->
+      <div style="display: flex; flex: 0;">
+        ${tabs.map(
+          (tab) => html`<div
+            class="right-tabs--tab-button"
+            :data-active="currentTab === '${tab.id}'"
+            @click="currentTab = currentTab === '${tab.id}' ? null : '${tab.id}'"
+          >
+            ${icon(tab.icon)}
+          </div>`
+        )}
+        <div style="border-top: 1px solid #000; flex: 1;"></div>
+      </div>
+    </div>
+    <style>
+      .right-tabs {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+      }
+      .right-tabs--tab {
+        flex: 1 1 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+      .right-tabs--tab-button[data-active="true"] {
+        border-top: none;
+      }
+      .right-tabs--tab-button {
+        border-top: 1px solid #000;
+        border-right: 1px solid #000;
         padding: 12px;
         display: flex;
       }
@@ -331,13 +397,10 @@ function renderTransportation() {
           margin-bottom: 0;
         }
         .transportation-data th:nth-child(1) {
-          width: 20%;
+          width: 36%;
         }
         .transportation-data th:nth-child(2) {
-          width: 60%;
-        }
-        .transportation-data th:nth-child(3) {
-          width: 20%;
+          width: 64%;
         }
         .transportation-data th {
           padding: 0;
@@ -358,12 +421,13 @@ function renderTransportation() {
 }
 
 function renderProductivity() {
-  return html`<div x-data="productivity">
+  return {
+    content: html`<div x-data="productivity">
       <!-- Google Tasks tasks -->
       <ul style="list-style: none; padding: 0; margin: 0; font-size: 16px;">
         <template x-for="task in tasks" :key="task.id">
           <li
-            style="padding: 8px 0; border-bottom: 1px solid #ccc; display: flex;"
+            style="padding: 8px 12px; border-bottom: 1px solid #ccc; display: flex;"
           >
             <!-- Checkbox -->
             <div style="margin-right: 8px;">
@@ -383,8 +447,8 @@ function renderProductivity() {
           </li>
         </template>
       </ul>
-    </div>
-    <script>
+    </div>`,
+    script: html` <script>
       document.addEventListener("alpine:init", () => {
         Alpine.data("productivity", () => ({
           // Array of Google Tasks tasks
@@ -400,5 +464,6 @@ function renderProductivity() {
           },
         }));
       });
-    </script>`;
+    </script>`,
+  };
 }
