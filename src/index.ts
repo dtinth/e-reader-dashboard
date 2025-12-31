@@ -104,6 +104,10 @@ export default new Elysia()
     const result = await ofetch(Bun.env["PRODUCTIVITY_ENDPOINT"]!);
     return result;
   })
+  .get("/transportation", async () => {
+    const result = await ofetch(Bun.env["TRANSPORTATION_ENDPOINT"]!);
+    return result.html;
+  })
   .get("/hass/status", async () => {
     const states = await getEntityStates();
     const map = new Map(states.map((state) => [state.entity_id, state]));

@@ -1,10 +1,18 @@
 import { pageResponse } from "./pageResponse";
-import { html } from "@thai/html";
+import { html, type Html } from "@thai/html";
 import { lightSceneEntities } from "./hass";
+import Home from "@iconify-icons/lucide/home";
+import TrainFront from "@iconify-icons/lucide/train-front";
 
 export function homepage() {
   return pageResponse("Dashboard", html``, {
     header: html`
+      <script
+        src="https://cdn.jsdelivr.net/npm/iconify-icon@3.0.2/dist/iconify-icon.min.js"
+        integrity="sha256-Am/FVmljwtoGse/9sLaiw+q1O2G65SznGIbU3ErcSQw="
+        crossorigin="anonymous"
+        async
+      ></script>
       <style>
         :root {
           --text-main: #fff;
@@ -51,17 +59,88 @@ export function homepage() {
           right: 0;
         }
         body[data-clock-fullscreen] .right-panel,
-        body[data-clock-fullscreen] .hass-container {
+        body[data-clock-fullscreen] .tabs-container {
           display: none;
         }
       </style>
       <div class="left-panel">
         <div class="clock-container">${renderClock()}</div>
-        <div class="hass-container">${renderHass()}</div>
+        <div class="tabs-container">${renderTabs()}</div>
       </div>
       <div class="right-panel">${renderProductivity()}</div>
     `,
   });
+}
+
+function renderTabs() {
+  const tabs: {
+    id: string;
+    icon: any;
+    content: Html;
+    script?: Html;
+  }[] = [
+    {
+      id: "home",
+      icon: Home,
+      content: html`${renderHass()}`,
+    },
+    {
+      id: "train",
+      icon: TrainFront,
+      ...renderTransportation(),
+    },
+  ];
+  return html`<div x-data="tabs" class="home-tabs">
+      <!-- Tabs -->
+      ${tabs.map(
+        (tab) => html`
+          <template x-if="currentTab === '${tab.id}'">
+            <div class="home-tabs--tab">${tab.content}</div>
+          </template>
+          ${tab.script ?? ""}
+        `
+      )}
+
+      <!-- Tab Bar -->
+      <div style="display: flex">
+        ${tabs.map(
+          (tab) => html`<div
+            class="home-tabs--tab-button"
+            :data-active="currentTab === '${tab.id}'"
+            @click="currentTab = currentTab === '${tab.id}' ? null : '${tab.id}'"
+          >
+            ${icon(tab.icon)}
+          </div>`
+        )}
+        <div style="border-top: 1px solid #fff; flex: 1;"></div>
+      </div>
+    </div>
+    <script>
+      document.addEventListener("alpine:init", () => {
+        Alpine.data("tabs", () => ({
+          currentTab: null,
+        }));
+      });
+    </script>
+    <style>
+      .home-tabs--tab {
+        border-top: 1px solid #fff;
+        padding: 12px;
+      }
+      .home-tabs--tab-button[data-active="true"] {
+        border-top: none;
+      }
+      .home-tabs--tab-button {
+        border-top: 1px solid #fff;
+        border-right: 1px solid #fff;
+        padding: 12px;
+        display: flex;
+      }
+    </style>`;
+}
+
+function icon(def: any) {
+  return html`<iconify-icon icon="${JSON.stringify(def)}"></iconify-icon>`;
 }
 
 function renderClock() {
@@ -131,7 +210,6 @@ function renderClock() {
 function renderHass() {
   return html`<style>
       .hass {
-        padding: 0 16px;
         font-size: 16px;
       }
       .hass table {
@@ -222,6 +300,60 @@ function renderHass() {
         </tr>
       </table>
     </div>`;
+}
+
+function renderTransportation() {
+  return {
+    content: html`<div style="font-size: 16px;" x-data="transportation">
+      <div x-html="transportation" class="transportation-data"></div>
+    </div>`,
+    script: html`<script>
+        document.addEventListener("alpine:init", () => {
+          Alpine.data("transportation", () => ({
+            transportation: "Loading...",
+            timer: null,
+            async init() {
+              await this.load();
+            },
+            async load() {
+              const result = await fetch("/transportation").then((r) =>
+                r.text()
+              );
+              this.transportation = result;
+            },
+          }));
+        });
+      </script>
+      <style>
+        .transportation-data table {
+          table-layout: fixed;
+          width: 100%;
+        }
+        .transportation-data th:nth-child(1) {
+          width: 20%;
+        }
+        .transportation-data th:nth-child(2) {
+          width: 60%;
+        }
+        .transportation-data th:nth-child(3) {
+          width: 20%;
+        }
+        .transportation-data th {
+          padding: 0;
+          font-size: 14px;
+        }
+        .transportation-data td {
+          padding: 2px 0 0;
+          font-family: var(--font-monospace), Sarabun;
+        }
+        .transportation-data th[align="right"] {
+          text-align: right;
+        }
+        .transportation-data td[align="right"] {
+          text-align: right;
+        }
+      </style>`,
+  };
 }
 
 function renderProductivity() {
