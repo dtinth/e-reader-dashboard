@@ -328,6 +328,7 @@ function renderTransportation() {
         .transportation-data table {
           table-layout: fixed;
           width: 100%;
+          margin-bottom: 0;
         }
         .transportation-data th:nth-child(1) {
           width: 20%;
