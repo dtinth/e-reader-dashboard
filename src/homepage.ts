@@ -439,11 +439,14 @@ function renderProductivity() {
               </template>
             </div>
             <!-- Task title -->
-            <span
-              x-text="task.title"
-              style="flex: 1;"
-              :style="task.completed ? 'opacity: 0.5' : ''"
-            ></span>
+            <div style="flex: 1;" :style="task.completed ? 'opacity: 0.5' : ''">
+              <div x-text="task.title"></div>
+              <div
+                x-text="task.notes"
+                x-show="!!task.notes"
+                style="font-size:12px"
+              ></div>
+            </div>
           </li>
         </template>
       </ul>
